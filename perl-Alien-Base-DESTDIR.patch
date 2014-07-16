@@ -1,6 +1,6 @@
 diff -urN Alien-Base-0.004.org/lib/Alien/Base/ModuleBuild.pm Alien-Base-0.004/lib/Alien/Base/ModuleBuild.pm
 --- Alien-Base-0.004.org/lib/Alien/Base/ModuleBuild.pm	2014-03-06 01:10:46.000000000 +0100
-+++ Alien-Base-0.004/lib/Alien/Base/ModuleBuild.pm	2014-07-16 21:20:38.934907259 +0200
++++ Alien-Base-0.004/lib/Alien/Base/ModuleBuild.pm	2014-07-16 21:39:40.920495735 +0200
 @@ -308,7 +308,10 @@
    return if $self->config_data( 'install_type' ) eq 'system';
  
@@ -13,3 +13,14 @@ diff -urN Alien-Base-0.004.org/lib/Alien/Base/ModuleBuild.pm Alien-Base-0.004/li
      local $CWD = $target;
  
      # The only form of introspection that exists is to see that the README file
+@@ -692,6 +695,10 @@
+   my $self = shift;
+   my $dir = shift || croak "Must specify a directory to include in packlist";
+ 
++  if ($self->destdir) {
++      return;
++  }
++
+   my $inst = ExtUtils::Installed->new;
+   my $packlist = $inst->packlist( $self->module_name );
+   print "Using " .  $packlist->packlist_file . "\n";
