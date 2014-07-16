@@ -14,6 +14,7 @@ License:	GPL v1+ or Artistic
 Group:		Development/Languages/Perl
 Source0:	http://www.cpan.org/modules/by-module/Alien/%{pdir}-%{pnam}-%{version}.tar.gz
 # Source0-md5:	ae8834c3e7361756781d45c44dc1cdab
+Patch0:		%{name}-DESTDIR.patch
 URL:		http://search.cpan.org/dist/Alien-Base/
 BuildRequires:	perl-Module-Build
 BuildRequires:	perl-devel >= 1:5.8.0
@@ -37,6 +38,7 @@ modules.
 
 %prep
 %setup -q -n %{pdir}-%{pnam}-%{version}
+%patch0 -p1
 
 %build
 %{__perl} Build.PL \

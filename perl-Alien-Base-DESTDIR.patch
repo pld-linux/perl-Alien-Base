@@ -1,0 +1,15 @@
+diff -urN Alien-Base-0.004.org/lib/Alien/Base/ModuleBuild.pm Alien-Base-0.004/lib/Alien/Base/ModuleBuild.pm
+--- Alien-Base-0.004.org/lib/Alien/Base/ModuleBuild.pm	2014-03-06 01:10:46.000000000 +0100
++++ Alien-Base-0.004/lib/Alien/Base/ModuleBuild.pm	2014-07-16 21:20:38.934907259 +0200
+@@ -308,7 +308,10 @@
+   return if $self->config_data( 'install_type' ) eq 'system';
+ 
+   {
+-    my $target = $self->alien_library_destination;
++    my $target = $self->destdir
++        ? File::Spec->catdir($self->destdir, $self->alien_library_destination)
++        : $self->alien_library_destination;
++    $self->alien_library_destination;
+     local $CWD = $target;
+ 
+     # The only form of introspection that exists is to see that the README file
