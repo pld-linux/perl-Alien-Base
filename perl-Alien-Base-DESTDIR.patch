@@ -41,3 +41,241 @@ index 5960502..a3b464b 100644
      print "Isolating dynamic libraries ... ";
      mkdir 'dynamic' unless -d 'dynamic';
      foreach my $dir (qw( bin lib )) {
+From f80423e8fb057227565b989417720ff9ee6f8904 Mon Sep 17 00:00:00 2001
+From: Graham Ollis <plicease@cpan.org>
+Date: Mon, 8 Sep 2014 14:15:59 -0400
+Subject: [PATCH] DESTDIR support for library search and packlist
+
+---
+ lib/Alien/Base/ModuleBuild.pm | 22 +++++++++++++++++++---
+ 1 file changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/lib/Alien/Base/ModuleBuild.pm b/lib/Alien/Base/ModuleBuild.pm
+index a3b464b..b5f8fe7 100644
+--- a/lib/Alien/Base/ModuleBuild.pm
++++ b/lib/Alien/Base/ModuleBuild.pm
+@@ -724,7 +724,7 @@ sub alien_find_lib_paths {
+   my @files =     
+     map { File::Spec->abs2rel( $_, $dir ) }  # make relative to $dir
+     grep { ! -d }
+-    @{ $self->rscan_dir( $dir, $file_pattern ) };
++    @{ $self->_rscan_destdir( $dir, $file_pattern ) };
+ 
+   my (@so_files, @lib_paths, @inc_paths);
+   for (@files) {
+@@ -762,12 +762,18 @@ sub alien_refresh_packlist {
+   my $self = shift;
+   my $dir = shift || croak "Must specify a directory to include in packlist";
+ 
+-  my $inst = ExtUtils::Installed->new;
++  my %installed_args;
++  $installed_args{extra_libs} = [map { File::Spec->catdir($self->destdir, $_) } @INC]
++    if defined $self->destdir;
++
++  my $inst = ExtUtils::Installed->new( %installed_args );
+   my $packlist = $inst->packlist( $self->module_name );
+   print "Using " .  $packlist->packlist_file . "\n";
+ 
+   my $changed = 0;
+-  my $files = $self->rscan_dir($dir);
++  my $files = $self->_rscan_destdir($dir);
++  $files = [ map { File::Spec->catdir($self->destdir, $_) } @$files ]
++    if defined $self->destdir;
+   for my $file (@$files) {
+     next if $packlist->{$file};
+     print "Adding $file to packlist\n"; 
+@@ -778,6 +784,16 @@ sub alien_refresh_packlist {
+   $packlist->write if $changed;
+ }
+ 
++sub _rscan_destdir {
++  my($self, $dir, $pattern) = @_;
++  my $destdir = $self->destdir;
++  $dir = File::Spec->catdir($destdir, $dir) if defined $destdir;
++  $dir =~ s{\\}{/}g if $^O eq 'MSWin32';
++  my $files = $self->rscan_dir($dir, $pattern);
++  $files = [ map { s/^$destdir//; $_ } @$files ] if defined $destdir;
++  $files;
++}
++
+ 1;
+ 
+ __END__
+From 4fd2acd658fd3a465e24eac2bda8a872a7f8f73c Mon Sep 17 00:00:00 2001
+From: Graham Ollis <perl@wdlabs.com>
+Date: Mon, 8 Sep 2014 20:08:10 -0400
+Subject: [PATCH] don't need to update packlist if packlist is turned off
+
+---
+ lib/Alien/Base/ModuleBuild.pm | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/lib/Alien/Base/ModuleBuild.pm b/lib/Alien/Base/ModuleBuild.pm
+index b5f8fe7..0f19f93 100644
+--- a/lib/Alien/Base/ModuleBuild.pm
++++ b/lib/Alien/Base/ModuleBuild.pm
+@@ -762,6 +762,8 @@ sub alien_refresh_packlist {
+   my $self = shift;
+   my $dir = shift || croak "Must specify a directory to include in packlist";
+ 
++  return unless $self->create_packlist;
++
+   my %installed_args;
+   $installed_args{extra_libs} = [map { File::Spec->catdir($self->destdir, $_) } @INC]
+     if defined $self->destdir;
+From aa0a28cf5ae17334444d3301e34f9977594928ff Mon Sep 17 00:00:00 2001
+From: Graham Ollis <perl@wdlabs.com>
+Date: Mon, 8 Sep 2014 20:13:48 -0400
+Subject: [PATCH] use subtests for readability; rmtree for directories
+
+unlink doesn't do anything to a directory / folder on most platforms
+so use rmtree.  This is probably overkill anyway since the directories
+shouldn't exist if the test passes
+---
+ t/builder.t | 17 +++++++++--------
+ 1 file changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/t/builder.t b/t/builder.t
+index 9f12c40..cae6b09 100644
+--- a/t/builder.t
++++ b/t/builder.t
+@@ -6,6 +6,7 @@ use Test::More;
+ use Alien::Base::ModuleBuild;
+ use File::chdir;
+ use File::Temp ();
++use File::Path qw( rmtree );
+ 
+ my $dir = File::Temp->newdir;
+ local $CWD = "$dir";
+@@ -22,8 +23,8 @@ sub builder { return Alien::Base::ModuleBuild->new( %basic, @_ ) }
+ #  Temporary Directories  #
+ ###########################
+ 
+-{
+-  unlink qw/_alien _share/;
++subtest 'default temp and share' => sub {
++  rmtree [qw/_alien _share/], 0, 1;
+ 
+   my $builder = builder;
+ 
+@@ -39,11 +40,11 @@ sub builder { return Alien::Base::ModuleBuild->new( %basic, @_ ) }
+   ok( ! -d '_alien', "Removes _alien dir");
+   ok( ! -d '_share', "Removes _share dir");
+ 
+-  unlink qw/_alien _share/;
+-}
++  rmtree [qw/_alien _share/], 0, 1;
++};
+ 
+-{
+-  unlink qw/_test_temp _test_share/;
++subtest 'override temp and share' => sub {
++  rmtree [qw/_test_temp _test_share/], 0, 1;
+ 
+   my $builder = builder(
+     alien_temp_dir => '_test_temp',
+@@ -58,8 +59,8 @@ sub builder { return Alien::Base::ModuleBuild->new( %basic, @_ ) }
+   ok( ! -d '_test_temp', "Removes _test_temp dir");
+   ok( ! -d '_test_share', "Removes _test_share dir");
+ 
+-  unlink qw/_test_temp _test_share/;
+-}
++  rmtree [qw/_test_temp _test_share/], 0, 1;
++};
+ 
+ done_testing;
+ 
+From 9c60f65f0e6f675fdda9ed61259677795ff3bd1f Mon Sep 17 00:00:00 2001
+From: Graham Ollis <perl@wdlabs.com>
+Date: Mon, 8 Sep 2014 21:14:38 -0400
+Subject: [PATCH] test for DESTDIR
+
+---
+ lib/Alien/Base/ModuleBuild.pm |  3 ++-
+ t/builder.t                   | 60 +++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 62 insertions(+), 1 deletion(-)
+
+diff --git a/lib/Alien/Base/ModuleBuild.pm b/lib/Alien/Base/ModuleBuild.pm
+index 0f19f93..de49bd1 100644
+--- a/lib/Alien/Base/ModuleBuild.pm
++++ b/lib/Alien/Base/ModuleBuild.pm
+@@ -340,7 +340,8 @@ sub ACTION_alien_install {
+ 
+   {
+     local $CWD = $self->config_data( 'working_directory' );
+-    local $ENV{DESTDIR} = $destdir if defined $destdir;
++    local $ENV{DESTDIR} = $ENV{DESTDIR};
++    $ENV{DESTDIR} = $destdir if defined $destdir;
+     print "Installing library to $CWD ... ";
+     $self->alien_do_commands('install') or die "Failed\n";
+     print "Done\n";
+diff --git a/t/builder.t b/t/builder.t
+index cae6b09..c87e142 100644
+--- a/t/builder.t
++++ b/t/builder.t
+@@ -62,5 +62,65 @@ subtest 'override temp and share' => sub {
+   rmtree [qw/_test_temp _test_share/], 0, 1;
+ };
+ 
++subtest 'destdir' => sub {
++
++  open my $fh, '>', 'build.pl';
++  print $fh <<'EOF';
++use strict;
++use warnings;
++use File::Copy qw( copy );
++
++my $cmd = shift;
++@ARGV = grep { s/DESTDIR/$ENV{DESTDIR}/eg; $_ } @ARGV;
++print "% $cmd @ARGV\n";
++if($cmd eq 'mkdir')    { mkdir shift } 
++elsif($cmd eq 'touch') { open my $fh, '>', shift; close $fh; }
++elsif($cmd eq 'copy')  { copy shift, shift }
++EOF
++  close $fh;
++
++  my $destdir = File::Temp->newdir;
++  
++  mkdir 'src';
++  open $fh, '>', 'src/foo.tar.gz';
++  print $fh unpack("u", 
++              q{M'XL(`%)-#E0``TO+S]=GH#$P,#`P-S55`-*&YJ8&R#0<*!@:F1@8FYB8F1J:} .
++              q{M*A@`.>:&#`JFM'88")06ER06`9V2GY.369R.6QTA>:@_X/00`6G`^-=+K<@L} .
++              q{L+BFFF1W`\#`S,2$E_HW-S<T9%`QHYB(D,,+C?Q2,@E$P<@$`7EO"E``(````}
++            );
++  close $fh;
++  
++  my $builder = builder(
++    alien_name => 'foobarbazfakething',
++    alien_build_commands => [
++      "$^X $CWD/build.pl mkdir bin",
++      "$^X $CWD/build.pl touch bin/foo",
++    ],
++    alien_install_commands => [
++      "$^X $CWD/build.pl mkdir DESTDIR/%s/bin",
++      "$^X $CWD/build.pl copy  bin/foo DESTDIR/%s/bin/foo",
++    ],
++    alien_repository => {
++      protocol => 'local',
++      location => 'src',
++    },
++  );
++
++  my $share = $builder->alien_library_destination;
++  
++  $builder->depends_on('build');
++
++  $builder->destdir($destdir);  
++  is $builder->destdir, $destdir, "destdir accessor";
++  
++  $builder->depends_on('install');
++
++  my $foo_script = File::Spec->catfile($destdir, $share, 'bin', 'foo');
++  ok -e $foo_script, "script installed in destdir $foo_script";
++    
++  unlink 'build.pl';
++  rmtree [qw/ _alien  _share  blib  src /], 0, 0;
++};
++
+ done_testing;
+ 
