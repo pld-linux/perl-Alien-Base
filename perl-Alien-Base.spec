@@ -8,7 +8,7 @@
 Summary:	Alien::Base - Base classes for Alien:: modules
 Name:		perl-Alien-Base
 Version:	0.004_02
-Release:	2
+Release:	3
 # same as perl
 License:	GPL v1+ or Artistic
 Group:		Development/Languages/Perl
