@@ -7,15 +7,13 @@
 %include	/usr/lib/rpm/macros.perl
 Summary:	Alien::Base - Base classes for Alien:: modules
 Name:		perl-Alien-Base
-Version:	0.004_02
-Release:	3
+Version:	0.005
+Release:	1
 # same as perl
 License:	GPL v1+ or Artistic
 Group:		Development/Languages/Perl
-# Source0:	http://www.cpan.org/modules/by-module/Alien/%{pdir}-%{pnam}-%{version}.tar.gz
-Source0:	https://github.com/Perl5-Alien/Alien-Base/archive/%{version}.tar.gz
-# Source0-md5:	09cfd0fb01767bad619378d302507b2c
-Patch0:		%{name}-DESTDIR.patch
+Source0:	http://www.cpan.org/modules/by-module/Alien/%{pdir}-%{pnam}-%{version}.tar.gz
+# Source0-md5:	a9718c202966e7fafd23fbcf069e7c6b
 URL:		http://search.cpan.org/dist/Alien-Base/
 BuildRequires:	perl-Module-Build
 BuildRequires:	perl-devel >= 1:5.8.0
@@ -39,7 +37,6 @@ modules.
 
 %prep
 %setup -q -n %{pdir}-%{pnam}-%{version}
-%patch0 -p1
 
 %build
 %{__perl} Build.PL \
