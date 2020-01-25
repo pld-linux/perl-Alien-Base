@@ -4,7 +4,6 @@
 #
 %define		pdir	Alien
 %define		pnam	Base
-%include	/usr/lib/rpm/macros.perl
 Summary:	Alien::Base - Base classes for Alien:: modules
 Name:		perl-Alien-Base
 Version:	0.005
