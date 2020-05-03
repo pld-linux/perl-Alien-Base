@@ -1,3 +1,4 @@
+# NOTE: for versions > 0.043_01 see perl-Alien-Build.spec
 #
 # Conditional build:
 %bcond_without	tests		# do not perform "make test"
@@ -8,7 +9,7 @@ Summary:	Alien::Base - Base classes for Alien:: modules
 Summary(pl.UTF-8):	Alien::Base - klasy bazowe dla modułów Alien::
 Name:		perl-Alien-Base
 Version:	0.005
-Release:	2
+Release:	2.1
 # same as perl
 License:	GPL v1+ or Artistic
 Group:		Development/Languages/Perl
